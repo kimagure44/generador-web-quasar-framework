@@ -9,6 +9,11 @@ const routes = [
     name: 'home',
     component: () => import(/* webpackChunkName: "home" */ '../views/Home.vue'),
   },
+  {
+    path: '/template',
+    name: 'template',
+    component: () => import(/* webpackChunkName: "home" */ '../views/generate-template.vue'),
+  },
 ];
 
 const router = new VueRouter({

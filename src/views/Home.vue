@@ -6,7 +6,7 @@
         <select ref="col">
           <option :value="i + 1" v-for="(c, i) in col" :key="i" v-text="c"></option>
         </select>
-        <button @click="generarHTML">GENERAR HTML</button>
+        <button @click="createHTML">GENERAR HTML</button>
       </div>
     </nav>
     <grid-layout
@@ -16,7 +16,7 @@
       :is-draggable="true"
       :is-resizable="true"
       :is-mirrored="false"
-      :vertical-compact="true"
+      :vertical-compact="false"
       :margin="[10, 10]"
       :use-css-transforms="true"
       :prevent-collision="false"
@@ -35,12 +35,13 @@
         @resized="resizedEvent"
         @container-resized="containerResizedEvent"
         @moved="movedEvent"
+        @click.native="evt => selectedItem(evt, item)"
       >
-      {{item.label}}
+        {{item.label}}
       </grid-item>
     </grid-layout>
-    <!-- {{layout}} -->
-    <pre v-text="result"></pre>
+    <router-link to="/template" target='_blank'>Template</router-link>
+    <pre v-text="html"></pre>
   </div>
 </template>
 
@@ -51,21 +52,57 @@ export default {
   name: 'home',
   data() {
     return {
+      html: '',
       layout: [],
       col: [],
-      result: '',
     };
   },
   methods: {
+    resetSelected() {
+      Object.values(document.querySelectorAll('.vue-grid-item')).forEach(data => data.classList.remove('item-selected'));
+    },
+    selectedItem(evt, item) {
+      console.log(item);
+      if (!evt.target.classList.value.includes('item-selected')) {
+        if (document.querySelectorAll('.item-selected').length > 1) {
+          this.resetSelected();
+        }
+        evt.target.classList.add('item-selected');
+      } else {
+        if (document.querySelectorAll('.item-selected').length === 1) {
+          this.resetSelected();
+        }
+        evt.target.classList.remove('item-selected');
+      }
+    },
     createElement(e) {
-      debugger;
       const type = e.target.getAttribute('data-type');
       if (type === 'col') {
         const size = this.layout.length;
         const val = parseInt(this.$refs.col.value, 10);
         const value = `col-${val}`;
+        let yMin = 0;
+        let yMax = 0;
+        let xMin = 0;
+        let xMax = 0;
+        if (size > 0) {
+          yMin = Math.min(...this.layout.map(d => d.y));
+          yMax = Math.max(...this.layout.map(d => d.y + yMax));
+          xMin = Math.min(...this.layout.map(d => d.x));
+          xMax = Math.max(...this.layout.map(d => d.x + d.w));
+        }
+        console.log(yMin, yMax, xMin, xMax);
+        if (xMax > 11) {
+          xMax = 0;
+          yMax += 1;
+        }
         const item = {
-          x: 0, y: 0, w: val, h: 1, i: size, label: value,
+          x: size > 0 ? xMax : 0,
+          y: size > 0 ? yMax : 0,
+          w: val,
+          h: 1,
+          i: size,
+          label: value,
         };
         this.layout.push(item);
       }
@@ -75,58 +112,67 @@ export default {
         this.col.push(`col-${cont}`);
       }
     },
-    resizeEvent(i, newH, newW, newHPx, newWPx) {
-      console.log('1', i, newH, newW, newHPx, newWPx);
+    resizeEvent() {
+      // resizeEvent(i, newH, newW, newHPx, newWPx)
+      // console.log('1', i, newH, newW, newHPx, newWPx);
     },
-    moveEvent(i, newX, newY) {
-      console.log('2', i, newX, newY);
+    moveEvent() {
+      // moveEvent(i, newX, newY)
+      // console.log('2', i, newX, newY);
     },
-    resizedEvent(i, newH, newW, newHPx, newWPx) {
-      console.log('3', i, newH, newW, newHPx, newWPx);
+    resizedEvent(i, newH, newW) {
+      // resizedEvent(i, newH, newW, newHPx, newWPx)
+      // console.log('3', i, newH, newW, newHPx, newWPx);
       this.layout[i].label = `col-${newW}`;
     },
-    containerResizedEvent(i, newH, newW, newHPx, newWPx) {
-      console.log('4', i, newH, newW, newHPx, newWPx);
+    containerResizedEvent() {
+      // containerResizedEvent(i, newH, newW, newHPx, newWPx)
+      // console.log('4', i, newH, newW, newHPx, newWPx);
     },
-    movedEvent(i, newX, newY) {
-      console.log('5', i, newX, newY);
+    movedEvent() {
+      // movedEvent(i, newX, newY)
+      // console.log('5', i, newX, newY);
     },
-    generarHTML() {
-      const size = this.layout.length;
-      let html = '';
-      if (size > 0) {
-        html += '<div class="q-pa-md">';
-        const yMin = Math.min(...this.layout.map(d => d.y));
-        const yMax = Math.max(...this.layout.map(d => d.y));
-        let arrTemp = [];
-        for (let y = yMin; y <= yMax; y += 1) {
-          html += '<div class="row">';
-          arrTemp = this.layout.filter(d => d.y === y).sort((a, b) => (a.x > b.x ? 1 : -1));
-          const xMin = Math.min(...arrTemp.map(d => d.x));
-          const xMax = Math.max(...arrTemp.map(d => d.x));
-          for (let x = 0; x < arrTemp.length; x += 1) {
-            const arrCurr = arrTemp[x];
-            const arrNext = arrTemp[x + 1] || arrTemp[x];
-            let offset = 0;
-            let renderOffset = '';
-            if (arrCurr.i !== arrNext.i) {
-              const calcOffset = (arrCurr.x + arrCurr.w) - arrNext.x;
-              offset = calcOffset < 0 ? calcOffset * -1 : calcOffset * 1;
-              renderOffset = offset === 0 ? '' : ` offset-${offset}`;
-              html += `<div class="col-${arrCurr.w}${renderOffset}"></div>`;
-            } else {
-              offset = 12 - (arrCurr.x + arrCurr.w);
-              renderOffset = offset === 0 ? '' : ` offset-${offset}`;
-              html += `<div class="col-${arrCurr.w}${renderOffset}"></div>`;
-            }
-          }
-          console.log(xMax);
-          console.log(xMin);
-          html += '</div>';
-        }
-        html += '</div>';
-        this.result = html;
+    createHTML() {
+      debugger;
+      const yMax = Math.max(...this.layout.map(d => d.y));
+      const ordenado = this.layout.sort((a, b) => (a.y > b.y ? 1 : -1));
+      const arrTemporal = [];
+      for (let cont = 0; cont <= yMax; cont += 1) {
+        const orden = ordenado.filter(data => data.y === cont).sort((a, b) => (a.x > b.x ? 1 : -1));
+        arrTemporal.push(orden);
       }
+      let html = '<div>';
+      arrTemporal.forEach((row) => {
+        html += '<div class="row">';
+        row.forEach((col, index, array) => {
+          debugger;
+          console.log(index, array);
+          let offset = '';
+          if (index === 0) {
+            if (col.x > 0) {
+              offset += ` offset-${col.x}`;
+            }
+          } else {
+            const { x: xPrev, w: wPrev } = array[index - 1];
+            const { x: xCurr } = array[index];
+            const renderOffset = xCurr - (xPrev + wPrev);
+            debugger;
+            offset += renderOffset === 0 ? '' : ` offset-${renderOffset}`;
+          }
+          html += `<div class="col-${col.w}${offset}">${col.label}</div>`;
+          // const { x, w } = col;
+        });
+        html += '</div>';
+      });
+      html += '</div>';
+      this.html = html;
+      fetch(`http://localhost:3000?html=${JSON.stringify(html)}`).then(() => console.log('OK'))
+        .catch(error => console.error('ERROR:', error))
+        .then(() => {
+          debugger;
+          console.log('Fichero creado y/o actualizado');
+        });
     },
   },
   created() {
@@ -139,17 +185,32 @@ export default {
 };
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 .item-div {
   box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
 }
 .vue-grid-layout {
   background: #eeeeee;
+  margin: 10px 0;
+}
+pre, iframe {
+  width: 100%;
+  box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+  margin: 10px 0;
+  padding: 10px;
 }
 pre {
   white-space: pre-wrap;
-  width: calc(100% - 20px);
-  box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
-  padding: 10px;
- }
+}
+iframe {
+  border: 0;
+}
+.vue-grid-item {
+  font-size: 12px;
+}
+.vue-grid-item.item-selected {
+  background: #1d87d2;
+  color: #ffffff;
+}
+
 </style>
