@@ -1,5 +1,8 @@
 # ui
 
+Generador de páginas web para quasar framework.
+De momento solo esta creado el drag & drop para los elementos row y col.
+
 ## Project setup
 ```
 npm install
